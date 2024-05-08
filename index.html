@@ -1,0 +1,74 @@
+<html>
+  <head>
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+  </head>
+  <body>
+    <div class="w3-container">
+      <div class="w3-container">
+        <h1 class="w3-center">Godo</h1>
+      </div>
+
+
+      <div class="w3-container w3-blue">
+        <h2>Add new todo</h2>
+      </div>
+      <div class="w3-container w3-padding w3-pale-yellow">
+        <br/>
+        <form method="POST" action="/todo/add">
+          <label>New todo name</label>
+          <input class="w3-input" type="text" name="todoName" placeholder="Todo name">
+          <br/>
+          <button class="w3-button w3-blue w3-round">Add new</button>
+        </form>
+      </div>
+
+      <br/>
+
+      {{ if .Todos }}
+      <div class="w3-container w3-green">
+        <h2>List of Todos</h2>
+      </div>
+      <div class="w3-container w3-light-gray w3-padding">
+        <br/>
+        <table class="w3-table w3-white">
+          <tbody>
+            {{ range $name, $status := .Todos }}
+            <tr>
+
+              <td style="width: 1%; white-space: nowrap; min-width: 20px; vertical-align: middle">
+                <form style="display: inline" method="POST" action="/todo/toggle">
+                  <input type="hidden" name="todoName" value="{{ urlEncode $name }}">
+                  <button class="w3-button">
+                    {{ if $status }}
+                    {{ icon "check-square" }}
+                    {{ else }}
+                    {{ icon "square-o" }}
+                    {{ end }}
+                  </button>
+                </form>
+              </td>
+
+              <td style="vertical-align: middle">
+                {{ $name }}
+              </td>
+
+              <td style="width: 1%; white-space: nowrap; min-width: 80px; vertical-align: middle;">
+                <form style="display: inline" method="POST" action="/todo/delete">
+                  <input type="hidden" name="todoName" value="{{ urlEncode $name }}">
+                  <button class="w3-button w3-red w3-round w3-margin-right">
+                  {{ icon "times" }}
+                  </button>
+                </form>
+              </td>
+
+            </tr>
+            {{ end }}
+          </tbody>
+        </table>
+        <br/>
+      </div>
+      {{ end }}
+    </div>
+  </body>
+</html>
