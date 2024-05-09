@@ -11,10 +11,6 @@ import (
 	"net/url"
 )
 
-func urlEncode(s string) string {
-	return url.QueryEscape(s)
-}
-
 func icon(s string) template.HTML {
 	return template.HTML(fmt.Sprintf(`<i class="fa fa-fw fa-%s"></i>`, s))
 }
@@ -61,50 +57,46 @@ func PostGetData(w http.ResponseWriter, r *http.Request, expectedFields []string
 }
 
 func main() {
+	db := InitDB()
+
 	funcMap := template.FuncMap{
-		"urlEncode": urlEncode,
-		"icon":      icon,
+		"icon": icon,
 	}
-	todos := map[string]bool{}
 
 	addTodo := func(todoName string) error {
-		if _, ok := todos[todoName]; ok {
-			return errors.New("todoName already exists")
-		}
-		todos[todoName] = false
+		InsertTodo(db, todoName)
 		return nil
 	}
 
 	toggleTodo := func(todoName string) error {
-		if _, ok := todos[todoName]; !ok {
-			return errors.New(fmt.Sprintf("can't find that todoName %s", todoName))
-		}
-		todos[todoName] = !todos[todoName]
+		ToggleTodo(db, todoName)
 		return nil
 	}
 
 	deleteTodo := func(todoName string) error {
-		if _, ok := todos[todoName]; !ok {
-			return errors.New("can't find that todoName")
-		}
-		delete(todos, todoName)
+		DeleteTodo(db, todoName)
 		return nil
+	}
+
+	allTodos := func() []Todo {
+		return AllTodos(db)
 	}
 
 	http.HandleFunc("/",
 		func(w http.ResponseWriter, r *http.Request) {
+			// move this into main to avoid remaking template on every page load
 			index_tmpl, err := template.New("index.html").Funcs(funcMap).ParseFiles("index.html")
 			if err != nil {
 				http.Error(w, "", http.StatusInternalServerError)
+				log.Println(err)
 				return
 			}
 			if r.Method != "GET" {
 				http.Error(w, "", http.StatusBadRequest)
 				return
 			}
-			data := map[string]interface{}{
-				"Todos": todos,
-			}
+			todos := AllTodos(db)
+			data := map[string]interface{}{"Todos": todos}
 			index_tmpl.Execute(w, data)
 		})
 
@@ -128,14 +120,14 @@ func main() {
 
 	http.HandleFunc("/todo/toggle",
 		func(w http.ResponseWriter, r *http.Request) {
-			expectedFields := []string{"todoName"}
+			expectedFields := []string{"id"}
 			data, err := PostGetData(w, r, expectedFields)
 			if err != nil {
 				log.Println(err)
 				http.Error(w, "", http.StatusBadRequest)
 				return
 			}
-			err = toggleTodo(data["todoName"])
+			err = toggleTodo(data["id"])
 			if err != nil {
 				log.Println(err)
 				http.Error(w, "", http.StatusBadRequest)
@@ -146,14 +138,14 @@ func main() {
 
 	http.HandleFunc("/todo/delete",
 		func(w http.ResponseWriter, r *http.Request) {
-			expectedFields := []string{"todoName"}
+			expectedFields := []string{"id"}
 			data, err := PostGetData(w, r, expectedFields)
 			if err != nil {
 				log.Println(err)
 				http.Error(w, "", http.StatusBadRequest)
 				return
 			}
-			err = deleteTodo(data["todoName"])
+			err = deleteTodo(data["id"])
 			if err != nil {
 				log.Println(err)
 				http.Error(w, "", http.StatusBadRequest)
@@ -168,6 +160,7 @@ func main() {
 				http.Error(w, "", http.StatusBadRequest)
 				return
 			}
+			todos := allTodos()
 			out, err := json.MarshalIndent(todos, "", "    ")
 			if err != nil {
 				http.Error(w, "", http.StatusInternalServerError)

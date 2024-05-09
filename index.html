@@ -33,14 +33,14 @@
         <br/>
         <table class="w3-table w3-white">
           <tbody>
-            {{ range $name, $status := .Todos }}
+            {{ range .Todos }}
             <tr>
 
               <td style="width: 1%; white-space: nowrap; min-width: 20px; vertical-align: middle">
                 <form style="display: inline" method="POST" action="/todo/toggle">
-                  <input type="hidden" name="todoName" value="{{ urlEncode $name }}">
+                  <input type="hidden" name="id" value="{{ .ID }}">
                   <button class="w3-button">
-                    {{ if $status }}
+                    {{ if .Finished }}
                     {{ icon "check-square" }}
                     {{ else }}
                     {{ icon "square-o" }}
@@ -50,12 +50,12 @@
               </td>
 
               <td style="vertical-align: middle">
-                {{ $name }}
+                {{ .Name }}
               </td>
 
               <td style="width: 1%; white-space: nowrap; min-width: 80px; vertical-align: middle;">
                 <form style="display: inline" method="POST" action="/todo/delete">
-                  <input type="hidden" name="todoName" value="{{ urlEncode $name }}">
+                  <input type="hidden" name="id" value="{{ .ID }}">
                   <button class="w3-button w3-red w3-round w3-margin-right">
                   {{ icon "times" }}
                   </button>
