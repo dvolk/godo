@@ -1,53 +1,47 @@
 package main
 
 import (
+	"database/sql"
 	"html/template"
 	"log"
 	"net/http"
 )
 
-var index_tmpl *template.Template
-var allTodos func() []Todo
-var addTodo func(todoName string) error
-var toggleTodo func(todoName string) error
-var deleteTodo func(todoName string) error
-
-func main() {
-	db := InitDB()
-
+func NewApplication(db *sql.DB) *Application {
+	var err error
 	funcMap := template.FuncMap{
 		"icon": Icon,
 	}
-	var err error
-	index_tmpl, err = template.New("index.html").Funcs(funcMap).ParseFiles("index.html")
+	index_tmpl, err := template.New("index.html").Funcs(funcMap).ParseFiles("index.html")
 	if err != nil {
 		panic(err)
 	}
+	templateMap := map[string]*template.Template{
+		"index.html": index_tmpl}
 
-	addTodo = func(todoName string) error {
-		InsertTodo(db, todoName)
-		return nil
+	app := Application{
+		DB:        db,
+		Templates: templateMap,
+		FuncMap:   funcMap,
 	}
 
-	toggleTodo = func(todoName string) error {
-		ToggleTodo(db, todoName)
-		return nil
-	}
+	return &app
+}
 
-	deleteTodo = func(todoName string) error {
-		DeleteTodo(db, todoName)
-		return nil
-	}
+var App *Application
 
-	allTodos = func() []Todo {
-		return AllTodos(db)
+func main() {
+	db, err := InitDB()
+	if err != nil {
+		log.Fatal("couldn't initialize database")
 	}
+	App = NewApplication(db)
 
-	http.HandleFunc("/", IndexHandler)
-	http.HandleFunc("/todo/add", AddTodoHandler)
-	http.HandleFunc("/todo/toggle", ToggleTodoHandler)
-	http.HandleFunc("/todo/delete", DeleteTodoHandler)
-	http.HandleFunc("/todo/all", AllTodosHandler)
+	http.HandleFunc("/", Chain(IndexHandler, Method("GET"), Logging()))
+	http.HandleFunc("/todo/add", Chain(AddTodoHandler, Method("POST"), Logging()))
+	http.HandleFunc("/todo/toggle", Chain(ToggleTodoHandler, Method("POST"), Logging()))
+	http.HandleFunc("/todo/delete", Chain(DeleteTodoHandler, Method("POST"), Logging()))
+	http.HandleFunc("/todo/all", Chain(AllTodosHandler, Method("GET"), Logging()))
 
 	serveAddr := ":18080"
 	log.Println("trying to listen on", serveAddr)

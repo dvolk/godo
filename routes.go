@@ -7,13 +7,14 @@ import (
 )
 
 func IndexHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
-		http.Error(w, "", http.StatusBadRequest)
+	todos, err := AllTodos(App.DB)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "database error", http.StatusInternalServerError)
 		return
 	}
-	todos := allTodos()
 	data := map[string]interface{}{"Todos": todos}
-	index_tmpl.Execute(w, data)
+	App.Templates["index.html"].Execute(w, data)
 }
 
 func AddTodoHandler(w http.ResponseWriter, r *http.Request) {
@@ -21,13 +22,13 @@ func AddTodoHandler(w http.ResponseWriter, r *http.Request) {
 	data, err := PostGetData(w, r, expectedFields)
 	if err != nil {
 		log.Println(err)
-		http.Error(w, "", http.StatusBadRequest)
+		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
-	err = addTodo(data["todoName"])
+	err = InsertTodo(App.DB, data["todoName"])
 	if err != nil {
 		log.Println(err)
-		http.Error(w, "", http.StatusBadRequest)
+		http.Error(w, "database error", http.StatusInternalServerError)
 		return
 	}
 	http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -38,13 +39,13 @@ func ToggleTodoHandler(w http.ResponseWriter, r *http.Request) {
 	data, err := PostGetData(w, r, expectedFields)
 	if err != nil {
 		log.Println(err)
-		http.Error(w, "", http.StatusBadRequest)
+		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
-	err = toggleTodo(data["id"])
+	err = ToggleTodo(App.DB, data["id"])
 	if err != nil {
 		log.Println(err)
-		http.Error(w, "", http.StatusBadRequest)
+		http.Error(w, "database error", http.StatusInternalServerError)
 		return
 	}
 	http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -55,27 +56,28 @@ func DeleteTodoHandler(w http.ResponseWriter, r *http.Request) {
 	data, err := PostGetData(w, r, expectedFields)
 	if err != nil {
 		log.Println(err)
-		http.Error(w, "", http.StatusBadRequest)
+		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
-	err = deleteTodo(data["id"])
+	err = DeleteTodo(App.DB, data["id"])
 	if err != nil {
 		log.Println(err)
-		http.Error(w, "", http.StatusBadRequest)
+		http.Error(w, "database error", http.StatusInternalServerError)
 		return
 	}
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 func AllTodosHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
-		http.Error(w, "", http.StatusBadRequest)
+	todos, err := AllTodos(App.DB)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "database error", http.StatusInternalServerError)
 		return
 	}
-	todos := allTodos()
 	out, err := json.MarshalIndent(todos, "", "    ")
 	if err != nil {
-		http.Error(w, "", http.StatusInternalServerError)
+		http.Error(w, "serialization error", http.StatusInternalServerError)
 		return
 	}
 	w.Write(out)

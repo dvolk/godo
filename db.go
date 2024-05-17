@@ -2,16 +2,15 @@ package main
 
 import (
 	"database/sql"
-	"log"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func InitDB() *sql.DB {
+func InitDB() (*sql.DB, error) {
 	db, err := sql.Open("sqlite3", "app.db")
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	sql := `CREATE TABLE IF NOT EXISTS items (
@@ -23,56 +22,59 @@ func InitDB() *sql.DB {
 
 	_, err = db.Exec(sql)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
-	return db
+	return db, err
 }
 
-func InsertTodo(db *sql.DB, name string) {
+func InsertTodo(db *sql.DB, name string) error {
 	stmt, err := db.Prepare("INSERT INTO items (name, finished, datetime_added) VALUES (?, ?, ?)")
-	if err != nil {
-		panic(err)
-	}
 	defer stmt.Close()
+	if err != nil {
+		return err
+	}
 
 	datetime := time.Now()
 	_, err = stmt.Exec(name, false, datetime)
 	if err != nil {
-		panic(err)
+		return err
 	}
+	return nil
 }
 
-func ToggleTodo(db *sql.DB, id string) {
+func ToggleTodo(db *sql.DB, id string) error {
 	stmt, err := db.Prepare("UPDATE items set finished = not finished where id = ?")
+	defer stmt.Close()
 	if err != nil {
-		panic(err)
+		return err
 	}
 	_, err = stmt.Exec(id)
 	if err != nil {
-		panic(err)
+		return err
 	}
-	defer stmt.Close()
+	return nil
 }
 
-func DeleteTodo(db *sql.DB, id string) {
+func DeleteTodo(db *sql.DB, id string) error {
 	stmt, err := db.Prepare("DELETE FROM items where id = ?")
+	defer stmt.Close()
 	if err != nil {
-		panic(err)
+		return err
 	}
 	_, err = stmt.Exec(id)
 	if err != nil {
-		panic(err)
+		return err
 	}
-	defer stmt.Close()
+	return nil
 }
 
-func AllTodos(db *sql.DB) []Todo {
+func AllTodos(db *sql.DB) ([]Todo, error) {
 	rows, err := db.Query("SELECT id, name, finished, datetime_added FROM items")
-	if err != nil {
-		panic(err)
-	}
 	defer rows.Close()
+	if err != nil {
+		return nil, err
+	}
 
 	todos := []Todo{}
 
@@ -80,13 +82,13 @@ func AllTodos(db *sql.DB) []Todo {
 		var todo Todo
 		err = rows.Scan(&todo.ID, &todo.Name, &todo.Finished, &todo.DatetimeAdded)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 		todos = append(todos, todo)
 	}
 	err = rows.Err()
 	if err != nil {
-		panic(err)
+		return nil, nil
 	}
-	return todos
+	return todos, nil
 }

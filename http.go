@@ -1,3 +1,5 @@
+// http related utilities
+
 package main
 
 import (
@@ -9,6 +11,8 @@ import (
 	"net/url"
 )
 
+// get the form or JSON data from the request,
+// and ensure the expected fields are present
 func PostGetData(w http.ResponseWriter, r *http.Request, expectedFields []string) (map[string]string, error) {
 	// works with both json and web form requests
 	out := map[string]string{}
